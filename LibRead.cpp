@@ -15,12 +15,14 @@ void LibRead::getLib(string path)
 	while (getline(inFile,line_string))
 	{
 		vector<double> axis = GetStringFromlog(line_string);
+		//Lib_是一个哈希表，通过查表的方式实现坐标的查找
 		Lib_[(int)axis[0]] = { axis[1],axis[2],axis[3] };
 	}
 }
 
 vector<double> LibRead::GetStringFromlog(std::string line)
 {
+	//读取每一行的输入，解析出每一个元素的值
 	int index_begin = 0, index_end = 0;
 	int length = 0;
 	vector<double> line_data;
@@ -52,6 +54,7 @@ vector<double> LibRead::GetStringFromlog(std::string line)
 
 Location LibRead::getLabelLocation(int label)
 {
+	//通过标签序号查找坐标，若查找不到该标签的序号，则会返回（-1，-1，-1）
 	if (fabs(label - (double)(int)label<EPS))
 	{
 		if (Lib_.find(label)!=Lib_.end())
@@ -72,7 +75,8 @@ Location LibRead::getLabelLocation(int label)
 
 vector<Location> LibRead::getLabelLocation(int label_1, int label_2, int step_num)
 {
-
+	//根据标签获取坐标函数的重载，支持同时输入两个标签，以及一个步数的输入，
+	//通过两个标签的坐标差取等分得到最终的坐标
 	Location loc_pre = getLabelLocation(label_1);
 	Location loc_end = getLabelLocation(label_2);
 	Location dis = (loc_pre-loc_end)/step_num;

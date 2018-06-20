@@ -14,6 +14,7 @@ LabelRead::~LabelRead()
 
 void LabelRead::init()
 {
+	//不同的行动时需要重新初始化
 	loc_.clear(); 
 	line_data_.clear();
 	log_data_.clear();
@@ -35,8 +36,11 @@ void LabelRead::labelFileRead(string path)
 	int profile_line_num = 0;
 	for (auto line :strArray)
 	{
-		if (line[0]!=0 && line[0]!=1)
+		//首先读取第一个字符，若是控制字段，则 profile_line_num ++
+		//控制段应该写在data.txt的最前面
+		if (line[0]==999)
 		{
+			//999保留字段是用来说明左右脚分别都有哪些模块
 			profile_line_num++;
 			int l_r_flag = line[1];
 			for (int j = 2; j<line.size(); j++)
@@ -44,6 +48,10 @@ void LabelRead::labelFileRead(string path)
 				left_right_foot_[line[j]] = l_r_flag;
 			}
 		}
+		//else if ( )
+		//{
+			//其他控制字符在这里添加
+		//}
 		else
 		{
 			break;
@@ -56,6 +64,7 @@ void LabelRead::labelFileRead(string path)
 
 void LabelRead::locFind(vector<vector<int>> line_data)
 {
+	//本模块是通过标签序列寻找标签坐标，并将标签坐标添加进service_loc_哈希表
 	//0:左 1：右
 	vector<Location> loc;
 	for (auto line:line_data)
@@ -63,6 +72,7 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 		int left_right_flag = line[0];
 		if (line.size()>2)
 		{
+			//单标签时的坐标寻找
 			vector<Location> steps =  lib_->getLabelLocation(line[1], line[2], line[3]);
 			for (auto step:steps)
 			{
@@ -77,6 +87,7 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 		}
 		else
 		{
+			//多标签时的坐标寻找
 			int left_right_flag = line[0];
 			Location step = lib_->getLabelLocation(line[1]);
 
@@ -94,6 +105,7 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 
 void LabelRead::traceWrite(string path)
 {
+	//测试数据的写入模块
 	for (auto service:service_loc_)
 	{
 		int service_id = service.first;
@@ -137,6 +149,7 @@ void LabelRead::logRead(string path)
 
 vector<int> LabelRead::GetStringFromlog(std::string line, bool int_flag)
 {
+	//从log中逐行读取数据
 	int index_begin = 0, index_end = 0;
 	int length = 0;
 	vector<int> line_data;
@@ -208,7 +221,9 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 	map<int, serviceStatus> flag;
 	for (vector<double> data : log )
 	{
+		//读取ins.log的基本原则是，从2号起始位开始记录，到返回时第二次到达1号位结束。
 		int service_id = data[2];
+		//3933即是1号位2号位的发射装置
 		int status_3933 = data[9];
 		flag[service_id].activity_flag = true;
 		if (status_3933 == 1 && !flag[service_id].first_flag)
