@@ -25,6 +25,8 @@ public:
 	void logRead(string path);
 	vector<int> GetStringFromlog(std::string line, bool int_flag);
 	vector<double> GetStringFromlog(std::string line);
+	vector<Location> getMapLoc(int service_id);
+	double getLength(int service_id);
 	
 
 private:
@@ -32,6 +34,7 @@ private:
 	map<int, int> left_right_foot_;//0:×ó 1£ºÓÒ
 	map<int, vector<Location>> service_loc_;
 	map<int, vector<vector<double>>> service_ins_;
+	map<int, vector<Location>> map_loc_;
 	vector<Location> loc_;
 	vector<vector<string>> line_data_;
 	vector<vector<double>> log_data_;

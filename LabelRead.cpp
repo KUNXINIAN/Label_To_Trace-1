@@ -103,30 +103,107 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 	return;
 }
 
+//void LabelRead::traceWrite(string path)
+//{
+//	for (auto service:service_loc_)
+//	{
+//		int service_id = service.first;
+//		if (service_ins_[service_id].size()!=service_loc_[service_id].size())
+//		{
+//			cout << "Waring:  " << service_id << "号模块数据未对齐，惯导数据集大小与标签数据集大小不一致" << endl;
+//		}
+//		fstream data_write;
+//		data_write.close();
+//		data_write.open(path + '-' + to_string(service_id) + ".csv",  std::ios::out);
+//		int length = service_ins_[service_id].size() > service_loc_[service_id].size() ? service_loc_[service_id].size() : service_ins_[service_id].size();
+//		for (int index = 0; index < length; index++)
+//		{
+//			for (auto axis: service_ins_[service_id][index])
+//			{
+//				data_write << setprecision(16)<< axis << ",";
+//			}
+//			data_write << setprecision(16) << service_loc_[service_id][index][0] <<","<<service_loc_[service_id][index][1]<<","<< service_loc_[service_id][index][2]<<endl;
+//		}
+//		data_write.close();
+//	}
+//}
+
 void LabelRead::traceWrite(string path)
 {
 	//测试数据的写入模块
-	for (auto service:service_loc_)
+	//最开始的思路是以标签序列为准绳，对齐惯导数据，后发现惯导数据集长度远大于标签序列
+	//所以改变思路，将标签序列均分，使两者数据长度相同。
+	for (auto service : service_loc_)
 	{
 		int service_id = service.first;
-		if (service_ins_[service_id].size()!=service_loc_[service_id].size())
+		vector<Location> loc = getMapLoc(service_id);
+		if (fabs(loc.size() - service_ins_[service_id].size())>2)
 		{
-			cout << "Waring:  " << service_id << "号模块数据未对齐，惯导数据集大小与标签数据集大小不一致" << endl;
+			throw("Waring:" + to_string(service_id) + "号模块数据未对齐，惯导数据集大小与标签数据集大小不一致");
 		}
 		fstream data_write;
 		data_write.close();
 		data_write.open(path + '-' + to_string(service_id) + ".csv",  std::ios::out);
-		int length = service_ins_[service_id].size() > service_loc_[service_id].size() ? service_loc_[service_id].size() : service_ins_[service_id].size();
+		int length = service_ins_[service_id].size() > loc.size() ? loc.size() : service_ins_[service_id].size();
 		for (int index = 0; index < length; index++)
 		{
 			for (auto axis: service_ins_[service_id][index])
 			{
 				data_write << setprecision(16)<< axis << ",";
 			}
-			data_write << setprecision(16) << service_loc_[service_id][index][0] <<","<<service_loc_[service_id][index][1]<<","<< service_loc_[service_id][index][2]<<endl;
+			data_write << setprecision(16) << loc[index][0] <<","<< loc[index][1]<<","<< loc[index][2]<<endl;
 		}
 		data_write.close();
 	}
+
+}
+
+vector<Location> LabelRead::getMapLoc(int service_id)
+{
+	int size = service_ins_[service_id].size();
+	vector<Location> loc_list = service_loc_[service_id];
+	vector<Location> coordinate_list;
+	if (size < loc_list.size())
+		return coordinate_list;
+	if (loc_list.size() < 2)
+		return coordinate_list;
+
+	double total_length = getLength(service_id);
+	double step = total_length / (double)size;
+	Location cur_loc = loc_list[0];
+	coordinate_list.push_back(cur_loc);
+	int next_loc_index = 1;
+	//相似三角形边长之比等于相似比
+	while (size > 0)
+	{
+		double dis = cur_loc.calDist(loc_list[next_loc_index]);
+		double cur_step = step;
+		//当步长大于接下来两个标签点间的距离时，需往第三个标签点延伸
+		while (next_loc_index<loc_list.size()-1 && dis < cur_step) {
+			cur_step -= dis;
+			dis = loc_list[next_loc_index].calDist(loc_list[next_loc_index + 1]);
+			cur_loc = loc_list[next_loc_index];
+			next_loc_index++;
+		}
+		double ratio = cur_step / dis;
+		cur_loc = (loc_list[next_loc_index] - cur_loc)*ratio + cur_loc;
+		coordinate_list.push_back(cur_loc);
+		size--;
+	}
+	return coordinate_list;
+}
+
+double LabelRead::getLength(int service_id)
+{
+	vector<Location> loc_list = service_loc_[service_id];
+	double sum = 0;
+	if (loc_list.size() < 1)
+		return 0.0;
+	for (int index = 1;index<loc_list.size();index++)
+	{
+		sum += loc_list[index].calDist(loc_list[index - 1]);
+	}
+	return sum;
 }
 
 void LabelRead::logRead(string path)
@@ -209,6 +286,8 @@ vector<double> LabelRead::GetStringFromlog(std::string line)
 	}
 	return line_data;
 }
+
+
 
 void LabelRead::logDataProcess(vector<vector<double>> log)
 {

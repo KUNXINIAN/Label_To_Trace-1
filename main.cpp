@@ -3,9 +3,10 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#define LABEL_PATH "C:/Users/Silence/Desktop/Label.csv"
-#define LOG_PATH "C:/Users/Silence/Desktop/"
-#define DATA_PATH "C:/Users/Silence/Desktop/Data/"
+#include <algorithm>
+#define LABEL_PATH "E:/data/MapMatcingData/Label.csv"
+#define LOG_PATH "E:/data/MapMatcingData/origin_data/"
+#define DATA_PATH "E:/data/MapMatcingData/process_data/"
 
 /*
 	本程序作用是生成地图匹配标准训练集，分为以下几个模块：
@@ -18,6 +19,7 @@
 
 int main()
 {
+	
 	LibRead lib_manager;
 	//读取label.csv
 	lib_manager.getLib(LABEL_PATH);
