@@ -19,7 +19,7 @@
 
 int main()
 {
-	
+	int a = INT_MAX;
 	LibRead lib_manager;
 	//读取label.csv
 	lib_manager.getLib(LABEL_PATH);
@@ -40,17 +40,25 @@ int main()
 		}
 		cout << "请输入数据名称:" << endl;
 	}
-	
+
 	for (auto folder:folder_list){
+		cout << "---------------------------------------------------------------------------" << endl;
+		cout << "请输入"<< folder <<"行动执行人的姓名（全拼）" << endl;
+		string name;
+		cin >> name;
 		string label_name = LOG_PATH + folder + "/data.txt";
 		string log_name = LOG_PATH + folder + "/ins.log";
 		label_manager.init();
-		//读取ins.log，原始惯导数据文件
-		label_manager.logRead(log_name);
 		//读取data.txt，即标签序列文件
 		label_manager.labelFileRead(label_name);
+		//读取ins.log，原始惯导数据文件
+		label_manager.logRead(log_name);
+
 		//写训练集文件，每个行动每个惯导模块，都有单独的文件
-		label_manager.traceWrite(DATA_PATH + folder);
+		//label_manager.traceWrite(DATA_PATH + folder + "-" +name);
+
+		//写步长文件，检测步长是否均匀
+		label_manager.getStepLength(DATA_PATH + folder + "-" + name);
 	}
 	cout << "-------------------------------------------------------------------------" << endl;
 	cout << "								 处理完成								      " << endl;

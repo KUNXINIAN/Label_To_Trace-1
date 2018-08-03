@@ -7,10 +7,7 @@
 struct serviceStatus
 {
 	bool activity_flag = false;
-	bool first_flag = false;
-	bool second_flag = false;
-	bool second_back_flag = false;
-	bool first_back_flag = false;
+	bool start_flag = false;
 };
 
 class LabelRead
@@ -27,6 +24,8 @@ public:
 	vector<double> GetStringFromlog(std::string line);
 	vector<Location> getMapLoc(int service_id);
 	double getLength(int service_id);
+	vector<int> getStartEndIndex(int service_id, vector<vector<double>> log);
+	void getStepLength(string path);
 	
 
 private:

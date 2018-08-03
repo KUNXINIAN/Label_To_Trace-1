@@ -155,6 +155,19 @@ void LabelRead::traceWrite(string path)
 		}
 		data_write.close();
 	}
+	for (auto service : service_loc_)
+	{
+		int service_id = service.first;
+		vector<Location> loc = service_loc_[service_id];
+		fstream data_write;
+		data_write.close();
+		data_write.open(path + '-' + to_string(service_id)+"-origin" + ".csv", std::ios::out);
+		for (auto step:loc)
+		{
+			data_write << setprecision(16) << step[0] << "," << step[1] << "," << step[2] << endl;
+		}
+		data_write.close();
+	}
 
 }
 
@@ -188,6 +201,10 @@ vector<Location> LabelRead::getMapLoc(int service_id)
 		double ratio = cur_step / dis;
 		cur_loc = (loc_list[next_loc_index] - cur_loc)*ratio + cur_loc;
 		coordinate_list.push_back(cur_loc);
+		if (coordinate_list.size() == 33)
+		{
+			int a = 0;
+		}
 		size--;
 	}
 	return coordinate_list;
@@ -205,6 +222,8 @@ double LabelRead::getLength(int service_id)
 	}
 	return sum;
 }
+
+
 
 void LabelRead::logRead(string path)
 {
@@ -297,40 +316,103 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 	//7:y_dis
 	//8:z_dis
 	//9:3933_status
+
+	//获取每一个模块的起始位置及结束位置。
+	map<int, vector<int>> start_end_index;
 	map<int, serviceStatus> flag;
-	for (vector<double> data : log )
+	for (auto service_id : left_right_foot_)
 	{
-		//读取ins.log的基本原则是，从2号起始位开始记录，到返回时第二次到达1号位结束。
-		int service_id = data[2];
+		start_end_index[service_id.first] = getStartEndIndex(service_id.first, log);
+		if (start_end_index[service_id.first][0] == 0 && start_end_index[service_id.first][1] == 0)
+		{
+			flag[service_id.first].activity_flag = false;
+		}
+		else
+		{
+			flag[service_id.first].activity_flag = true;
+		}
+	}
+	map<int, vector<double>>  last_step;
+	for (int index = 0;index<log.size();index++ )
+	{
+		//读取ins.log的基本原则是，从2号起始位开始记录，到返回时第二次到达2号位结束。
+		int service_id = log[index][2];
+		if (left_right_foot_[service_id] == 0)
+			continue;
 		//3933即是1号位2号位的发射装置
-		int status_3933 = data[9];
-		flag[service_id].activity_flag = true;
-		if (status_3933 == 1 && !flag[service_id].first_flag)
+		int status_3933 = log[index][9];
+		if (!flag[service_id].start_flag && index >= start_end_index[service_id][0])
 		{
-			flag[service_id].first_flag = true;
+			flag[service_id].start_flag = true;
+			last_step[service_id] = { 0,0 };
 		}
-		if (status_3933 == 2 && !flag[service_id].second_flag)
-		{
-			flag[service_id].second_flag = true;
-		}
-		if (status_3933 == 2 && flag[service_id].first_flag && 
-			!flag[service_id].second_flag)
-		{
-			flag[service_id].second_back_flag = true;
-		}
-		if (status_3933 == 1 && flag[service_id].first_flag && 
-			flag[service_id].second_flag && !flag[service_id].second_back_flag)
-		{
-			flag[service_id].first_back_flag = true;
-		}
+			
+		if (flag[service_id].start_flag && index > start_end_index[service_id][1])
+			flag[service_id].start_flag = false;
+
 		vector<double> step;
-		if (flag[service_id].first_flag && flag[service_id].second_flag 
-			/*&& !flag[service_id].first_back_flag*/)
+		if (flag[service_id].activity_flag && flag[service_id].start_flag)
 		{
-			step.push_back(data[6]);
-			step.push_back(data[7]);
-			step.push_back(data[8]);
+			double dis = sqrt(pow(log[index][6] - last_step[service_id][0], 2) + pow(log[index][7] - last_step[service_id][1], 2));
+			if (abs(dis) < 1e-3)
+				continue;
+			step.push_back(log[index][6]);
+			step.push_back(log[index][7]);
+			step.push_back(log[index][8]);
 			service_ins_[service_id].push_back(step);
+			last_step[service_id] = { log[index][6] ,log[index][7] };
 		}
+	}
+}
+
+vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> log)
+{
+	vector<int> status_2;
+	int data_length = 0;
+	for (int index = 0; index<log.size();index++)
+	{
+		if (log[index][2] == service_id)
+			data_length++;
+		if (log[index][2] == service_id && fabs(log[index][9] - 2) < 1e-3)
+		{
+			status_2.push_back(index);
+		}
+	}
+	if (status_2.size() < 2)
+		return{ 0,0 };
+	int max_dis = INT_MIN;
+	int index1 = 0, index2 = 0;
+	for (int i = 1; i < status_2.size(); i++)
+	{
+		if (status_2[i] - status_2[i - 1] > max_dis)
+		{
+			max_dis = status_2[i] - status_2[i - 1];
+			index1 = status_2[i - 1];
+			index2 = status_2[i];
+		}
+	}
+	if (max_dis < (data_length / 2))
+		return{ 0,0 };
+
+	return {index1,index2};
+}
+
+void LabelRead::getStepLength(string path)
+{
+	for (auto service : service_ins_)
+	{
+		int service_id = service.first;
+		vector<vector<double>> data = service.second;
+		fstream data_write;
+		data_write.close();
+		data_write.open(path + '-' + to_string(service_id) + "-step_length" + ".csv", std::ios::out);
+		for (int index = 1;index<data.size();index++)
+		{
+			double dis = sqrt( pow(data[index][0] - data[index - 1][0],2) + pow(data[index][1] - data[index - 1][1], 2));
+			if (abs(dis - 0) < 1e-3)
+				int a = 0;
+			data_write << setprecision(16) << dis << endl;
+		}
+		data_write.close();
 	}
 }
