@@ -137,7 +137,7 @@ void LabelRead::traceWrite(string path)
 	{
 		int service_id = service.first;
 		vector<Location> loc = getMapLoc(service_id);
-		if (fabs(loc.size() - service_ins_[service_id].size())>2)
+		if (abs((int)(loc.size() - service_ins_[service_id].size()))>2)
 		{
 			throw("Waring:" + to_string(service_id) + "号模块数据未对齐，惯导数据集大小与标签数据集大小不一致");
 		}
