@@ -135,7 +135,7 @@ public:
 	}
 	~Location() {}
 
-	double calDist(Location location)//计算相邻标签点的距离
+	double calDist(Location location)
 	{
 		double dis = 0;
 		dis += pow(this->array_data_[0] - location[0], 2);

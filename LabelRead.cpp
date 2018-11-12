@@ -72,7 +72,7 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 		int left_right_flag = line[0];
 		if (line.size()>2)
 		{
-			//多标签时的坐标寻找
+			//单标签时的坐标寻找
 			vector<Location> steps =  lib_->getLabelLocation(line[1], line[2], line[3]);
 			for (auto step:steps)
 			{
@@ -87,7 +87,7 @@ void LabelRead::locFind(vector<vector<int>> line_data)
 		}
 		else
 		{
-			//单标签时的坐标寻找
+			//多标签时的坐标寻找
 			int left_right_flag = line[0];
 			Location step = lib_->getLabelLocation(line[1]);
 
@@ -137,7 +137,7 @@ void LabelRead::traceWrite(string path)
 	{
 		int service_id = service.first;
 		vector<Location> loc = getMapLoc(service_id);
-		if (abs((int)(loc.size() - service_ins_[service_id].size()))>2)
+		if (fabs(loc.size() - service_ins_[service_id].size())>2)
 		{
 			throw("Waring:" + to_string(service_id) + "号模块数据未对齐，惯导数据集大小与标签数据集大小不一致");
 		}
@@ -155,7 +155,7 @@ void LabelRead::traceWrite(string path)
 		}
 		data_write.close();
 	}
-	/*for (auto service : service_loc_)
+	for (auto service : service_loc_)
 	{
 		int service_id = service.first;
 		vector<Location> loc = service_loc_[service_id];
@@ -167,7 +167,7 @@ void LabelRead::traceWrite(string path)
 			data_write << setprecision(16) << step[0] << "," << step[1] << "," << step[2] << endl;
 		}
 		data_write.close();
-	}*/
+	}
 
 }
 
@@ -176,14 +176,14 @@ vector<Location> LabelRead::getMapLoc(int service_id)
 	int size = service_ins_[service_id].size();
 	vector<Location> loc_list = service_loc_[service_id];
 	vector<Location> coordinate_list;
-	if (size < loc_list.size())
-		return coordinate_list;
-	if (loc_list.size() < 2)
-		return coordinate_list;
+	//if (size < loc_list.size())
+	//	return coordinate_list;
+	//if (loc_list.size() < 2)
+	//	return coordinate_list;
 
-	double total_length = getLength(service_id);//计算某模块标签数据的总长度
-	double step = total_length / (double)size;//计算总长度/惯导数
-	Location cur_loc = loc_list[0];//起始点位置
+	double total_length = getLength(service_id);
+	double step = total_length / (double)size;
+	Location cur_loc = loc_list[0];
 	coordinate_list.push_back(cur_loc);
 	int next_loc_index = 1;
 	//相似三角形边长之比等于相似比
@@ -210,7 +210,7 @@ vector<Location> LabelRead::getMapLoc(int service_id)
 	return coordinate_list;
 }
 
-double LabelRead::getLength(int service_id)//计算所有标签的总长度
+double LabelRead::getLength(int service_id)
 {
 	vector<Location> loc_list = service_loc_[service_id];
 	double sum = 0;
@@ -218,7 +218,7 @@ double LabelRead::getLength(int service_id)//计算所有标签的总长度
 		return 0.0;
 	for (int index = 1;index<loc_list.size();index++)
 	{
-		sum += loc_list[index].calDist(loc_list[index - 1]);//计算所有标签的总长度
+		sum += loc_list[index].calDist(loc_list[index - 1]);
 	}
 	return sum;
 }
@@ -233,13 +233,13 @@ void LabelRead::logRead(string path)
 	vector<vector<double>> log_data;
 	while (getline(inFile,line_string))
 	{
-		vector<double> data = GetStringFromlog(line_string);//按行读取ins.log文件-->data
+		vector<double> data = GetStringFromlog(line_string);
 		if (!data.empty())
 		{
-			log_data.push_back(data);//log_data包含所有ins.log的数据
+			log_data.push_back(data);
 		}	
 	}
-	logDataProcess(log_data);//按照模块号从ins.log文件中提取数据，并去重
+	logDataProcess(log_data);
 	return;
 }
 
@@ -317,13 +317,13 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 	//8:z_dis
 	//9:3933_status
 
-	//获取每一个模块的起始位置及结束位置
+	//获取每一个模块的起始位置及结束位置。
 	map<int, vector<int>> start_end_index;
 	map<int, serviceStatus> flag;
 	for (auto service_id : left_right_foot_)
 	{
-		start_end_index[service_id.first] = getStartEndIndex(service_id.first, log);//getStartEndIndex：获取每一个模块的起始位置及结束位置
-		if (start_end_index[service_id.first][0] == 0 && start_end_index[service_id.first][1] == 0)//若某模块起始位置和结束位置为0
+		start_end_index[service_id.first] = getStartEndIndex(service_id.first, log);
+		if (start_end_index[service_id.first][0] == 0 && start_end_index[service_id.first][1] == 0)
 		{
 			flag[service_id.first].activity_flag = false;
 		}
@@ -332,18 +332,8 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 			flag[service_id.first].activity_flag = true;
 		}
 	}
-
-	map<int, int> zero_flag;
-	for (auto service_id : left_right_foot_)
-	{
-		zero_flag[service_id.first] = 0;
-	}
 	map<int, vector<double>>  last_step;
-	for (auto service_id : left_right_foot_)
-	{
-		last_step[service_id.first] = { 0, 0 };
-	}
-	for (int index = 0; index < log.size(); index++)//按行读取ins.log文件
+	for (int index = 0;index<log.size();index++ )
 	{
 		//读取ins.log的基本原则是，从2号起始位开始记录，到返回时第二次到达2号位结束。
 		int service_id = log[index][2];
@@ -351,89 +341,48 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 			continue;
 		//3933即是1号位2号位的发射装置
 		int status_3933 = log[index][9];
-		if (!flag[service_id].start_flag && index >= start_end_index[service_id][0])//ins.log文件中index>=2号位起始的index
+		if (!flag[service_id].start_flag && index >= start_end_index[service_id][0])
 		{
-			flag[service_id].start_flag = true;//激活
-			//last_step[service_id] = { 0, 0 };
+			flag[service_id].start_flag = true;
+			last_step[service_id] = { 0,0 };
 		}
-
-		if (flag[service_id].start_flag && index > start_end_index[service_id][1])//ins.log文件中index<=2号位结束的index
-			flag[service_id].start_flag = false;//关闭
+			
+		if (flag[service_id].start_flag && index > start_end_index[service_id][1])
+			flag[service_id].start_flag = false;
 
 		vector<double> step;
-
-		if (flag[service_id].activity_flag && flag[service_id].start_flag)//处理2号位起始和结束位置中的数据，去重
+		if (flag[service_id].activity_flag && flag[service_id].start_flag)
 		{
-
-			double dis = sqrt(pow(log[index][6] - last_step[service_id][0], 2) + pow(log[index][7] - last_step[service_id][1], 2));//去重
-			/*			if (abs(dis) < 1e-3)
+			double dis = sqrt(pow(log[index][6] - last_step[service_id][0], 2) + pow(log[index][7] - last_step[service_id][1], 2));
+			if (abs(dis) < 1e-3)
 				continue;
 			step.push_back(log[index][6]);
 			step.push_back(log[index][7]);
 			step.push_back(log[index][8]);
 			service_ins_[service_id].push_back(step);
-			last_step[service_id] = { log[index][6], log[index][7] };*/
-					
-			if (abs(dis) < 1e-3)
-			{
-				zero_flag[service_id]++;
-				continue;
-			}
-			else
-			{
-				if (zero_flag[service_id] == 0)
-				{
-					step.push_back(log[index][6]);
-					step.push_back(log[index][7]);
-					step.push_back(log[index][8]);
-					service_ins_[service_id].push_back(step);
-					last_step[service_id] = { log[index][6], log[index][7] };
-				}
-				else
-				{
-
-					for (int i = 1;  i <= (zero_flag[service_id]+1);  i++)
-					{
-						vector<double> step;
-						double delta_x = (log[index][6] - last_step[service_id][0])*i / (zero_flag[service_id] + 1);
-						double delta_y = (log[index][7] - last_step[service_id][1])*i / (zero_flag[service_id] + 1);
-						double x = last_step[service_id][0] + delta_x;
-						double y = last_step[service_id][1] + delta_y;
-						step.push_back(x);
-						step.push_back(y);
-						step.push_back(log[index][8]);
-						service_ins_[service_id].push_back(step);
-						last_step[service_id] = { x, y };
-					}					
-					
-				}
-				zero_flag[service_id] = 0;
-			}
-			
+			last_step[service_id] = { log[index][6] ,log[index][7] };
 		}
 	}
-
 }
 
-
-vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> log)//getStartEndIndex：获取每一个模块的起始位置及结束位置
+vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> log)
 {
 	vector<int> status_2;
 	int data_length = 0;
 	for (int index = 0; index<log.size();index++)
 	{
 		if (log[index][2] == service_id)
-			data_length++;//在ins.log文件中某模块的数据长度
+			data_length++;
 		if (log[index][2] == service_id && fabs(log[index][9] - 2) < 1e-3)
 		{
-			status_2.push_back(index);//该模块数据中2号位数据对应的index
+			status_2.push_back(index);
 		}
 	}
-	if (status_2.size() < 2)//若ins.log文件中某模块的2号位个数小于2
+	if (status_2.size() < 2)
 		return{ 0,0 };
 	int max_dis = INT_MIN;
 	int index1 = 0, index2 = 0;
-	for (int i = 1; i < status_2.size(); i++)//找到index中间隔最大的两个点位index1，index2
+	for (int i = 1; i < status_2.size(); i++)
 	{
 		if (status_2[i] - status_2[i - 1] > max_dis)
 		{
@@ -442,8 +391,8 @@ vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> l
 			index2 = status_2[i];
 		}
 	}
-	if (max_dis < (data_length / 2))
-		return{ 0,0 };
+	if (max_dis < (data_length*0.85))
+		index2 = status_2.back();
 
 	return {index1,index2};
 }

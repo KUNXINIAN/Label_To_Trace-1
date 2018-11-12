@@ -55,7 +55,7 @@ vector<double> LibRead::GetStringFromlog(std::string line)
 Location LibRead::getLabelLocation(int label)
 {
 	//通过标签序号查找坐标，若查找不到该标签的序号，则会返回（-1，-1，-1）
-	if (abs(label - (double)(int)label<EPS))
+	if (fabs(label - (double)(int)label<EPS))
 	{
 		if (Lib_.find(label)!=Lib_.end())
 		{
