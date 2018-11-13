@@ -10,14 +10,30 @@ LabelRead::LabelRead(LibRead *libReader):lib_(libReader)
 
 LabelRead::~LabelRead()
 {
+
 }
 
 void LabelRead::init()
-{
+{	
 	//不同的行动时需要重新初始化
-	loc_.clear(); 
+	loc_.clear();
 	line_data_.clear();
 	log_data_.clear();
+	left_right_foot_.clear();
+	service_loc_.clear();
+	service_ins_.clear();
+	map_loc_.clear();
+}
+
+void LabelRead::stop()
+{
+	loc_.clear();
+	line_data_.clear();
+	log_data_.clear();
+	left_right_foot_.clear();
+	service_loc_.clear();
+	service_ins_.clear();
+	map_loc_.clear();
 }
 
 void LabelRead::labelFileRead(string path)
@@ -368,6 +384,8 @@ void LabelRead::logDataProcess(vector<vector<double>> log)
 vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> log)
 {
 	vector<int> status_2;
+	map<int, int> order;
+	map<int, double> distance;
 	int data_length = 0;
 	for (int index = 0; index<log.size();index++)
 	{
@@ -375,7 +393,8 @@ vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> l
 			data_length++;
 		if (log[index][2] == service_id && fabs(log[index][9] - 2) < 1e-3)
 		{
-			status_2.push_back(index);
+			order[data_length] = index;
+			status_2.push_back(data_length);
 		}
 	}
 	if (status_2.size() < 2)
@@ -392,9 +411,19 @@ vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> l
 		}
 	}
 	if (max_dis < (data_length*0.85))
-		index2 = status_2.back();
-
-	return {index1,index2};
+	{
+		if (status_2.size()>3)
+		{
+			index1 = status_2[2];
+			index2 = status_2.back();
+		}
+		else
+		{
+			index1 = status_2.front();
+			index2 = status_2.back();
+		}	
+	}
+	return {order[index1],order[index2]};
 }
 
 void LabelRead::getStepLength(string path)
