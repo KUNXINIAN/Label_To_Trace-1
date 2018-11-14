@@ -412,7 +412,7 @@ vector<int> LabelRead::getStartEndIndex(int service_id, vector<vector<double>> l
 	}
 	if (max_dis < (data_length*0.85))
 	{
-		if (status_2.size()>3)
+		if (status_2.size()>4)
 		{
 			index1 = status_2[2];
 			index2 = status_2.back();
